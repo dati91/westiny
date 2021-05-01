@@ -3,7 +3,7 @@ use amethyst::ecs::{System, SystemData, ReadStorage, WriteStorage, Join};
 use amethyst::core::Transform;
 use amethyst::core::math::{Vector2, Rotation2, Point2};
 
-use westiny_common::MoveDirection;
+use westiny_common::{MoveDirection, Movement};
 use westiny_common::components::{Player, Velocity};
 use westiny_common::components::{InputFlags, Input};
 use westiny_common::metric_dimension::{MeterPerSec, rotate};
@@ -24,10 +24,17 @@ impl<'s> System<'s> for PlayerMovementSystem {
         for (_player, input, mut velocity, transform) in (&players, &inputs, &mut velocities, &mut transforms).join() {
             rotate_toward_point(transform, &Point2::new(input.cursor.x.into_pixel(), input.cursor.y.into_pixel()));
 
-            let move_inputs = move_directions_from_input(&input);
-            log::debug!("{:?} {}", input, move_inputs.len());
+            let move_dir_inputs = move_directions_from_input(&input);
+            let movement_inputs = movement_from_input(&input);
+            log::debug!("{:?} {} {}", input, move_dir_inputs.len(), movement_inputs.len());
 
-            update_velocity(&transform, &move_inputs, &mut velocity);
+            if !move_dir_inputs.is_empty() || movement_inputs.is_empty() {
+                update_velocity(&transform, &move_dir_inputs, &mut velocity);
+                return;
+            }
+
+            // We have no move_dir at this point, calc with movement
+            update_velocity_with_movement(&transform, &movement_inputs, &mut velocity);
         }
     }
 }
@@ -43,17 +50,38 @@ pub fn move_directions_from_input(input: &Input) -> Vec<MoveDirection>
     {
         directions.push(MoveDirection::Backward);
     }
-    if input.flags.intersects(InputFlags::LEFT)
+    if input.flags.intersects(InputFlags::STRAFELEFT)
     {
         directions.push(MoveDirection::StrafeLeft);
     }
-    if input.flags.intersects(InputFlags::RIGHT)
+    if input.flags.intersects(InputFlags::STRAFERIGHT)
     {
         directions.push(MoveDirection::StrafeRight);
     }
     directions
 }
 
+pub fn movement_from_input(input: &Input) -> Vec<Movement>
+{
+    let mut movement = Vec::new();
+    if input.flags.intersects(InputFlags::UP)
+    {
+        movement.push(Movement::Up);
+    }
+    if input.flags.intersects(InputFlags::DOWN)
+    {
+        movement.push(Movement::Down);
+    }
+    if input.flags.intersects(InputFlags::LEFT)
+    {
+        movement.push(Movement::Left);
+    }
+    if input.flags.intersects(InputFlags::RIGHT)
+    {
+        movement.push(Movement::Right);
+    }
+    movement
+}
 
 pub fn rotate_toward_point(
     transform: &mut Transform,
@@ -93,15 +121,15 @@ fn vector_avg<'a, I>(velocities: I) -> Vector2<MeterPerSec>
 
     let mut x = MeterPerSec::zero();
     let mut y = MeterPerSec::zero();
-    let mut len = 0;
+    let mut len = 0f32;
 
     for &vel in velocities {
         x += vel.x;
         y += vel.y;
-        len += 1;
+        len += 1.;
     }
 
-    Vector2::new(x/len as f32, y/len as f32)
+    Vector2::new(x/(len.sqrt()) as f32, y/(len.sqrt()) as f32)
 }
 
 // TODO I couldn't manage to create valid rustdoc links :(
@@ -115,6 +143,32 @@ fn as_vector2(move_dir: MoveDirection) -> Vector2<MeterPerSec> {
         MoveDirection::StrafeLeft => Vector2::new(PLAYER_MAX_WALK_SPEED / 2.0, MeterPerSec::zero()),
         MoveDirection::StrafeRight => Vector2::new(-PLAYER_MAX_WALK_SPEED / 2.0, MeterPerSec::zero())
     }
+}
+
+fn as_vector2_movement(movement: Movement) -> Vector2<MeterPerSec> {
+    match movement {
+        Movement::Up => Vector2::new(MeterPerSec::zero(), PLAYER_MAX_WALK_SPEED),
+        Movement::Down => Vector2::new(MeterPerSec::zero(), -PLAYER_MAX_WALK_SPEED),
+        Movement::Left => Vector2::new(-PLAYER_MAX_WALK_SPEED, MeterPerSec::zero()),
+        Movement::Right => Vector2::new(PLAYER_MAX_WALK_SPEED, MeterPerSec::zero())
+    }
+}
+
+fn update_velocity_with_movement(
+    _transform: &Transform,
+    move_inputs: &Vec<Movement>,
+    velocity: &mut Velocity
+) {
+    *velocity = if move_inputs.is_empty() {
+        Velocity::default()
+    } else {
+        let velocities: Vec<Vector2<MeterPerSec>> = move_inputs.into_iter()
+            .map(|dir| as_vector2_movement(*dir))
+            .collect();
+
+        // TODO calc actual speed from facing direction
+        Velocity(vector_avg(&velocities))
+    };
 }
 
 #[cfg(test)]

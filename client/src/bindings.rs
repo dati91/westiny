@@ -17,7 +17,10 @@ pub enum ActionBinding {
     Select2,
     Select3,
     Select4,
-    Select5,
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]

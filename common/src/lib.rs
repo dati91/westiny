@@ -22,6 +22,15 @@ pub enum MoveDirection {
     StrafeRight,
 }
 
+/// The move direction absolute to world-space
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub enum Movement {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 pub use serialization::{serialize, deserialize};
 use std::fmt;
 

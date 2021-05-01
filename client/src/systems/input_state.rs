@@ -11,11 +11,11 @@ use westiny_common::components::{InputFlags, Input};
 use westiny_common::resources::{ServerAddress, CursorPosition};
 use westiny_common::{network, serialize};
 
-const INPUT_FLAG_MAPPING : [(InputFlags, ActionBinding); 13] = [
+const INPUT_FLAG_MAPPING : [(InputFlags, ActionBinding); 16] = [
     (InputFlags::FORWARD,  ActionBinding::Forward),
     (InputFlags::BACKWARD, ActionBinding::Backward),
-    (InputFlags::LEFT,     ActionBinding::StrafeLeft),
-    (InputFlags::RIGHT,    ActionBinding::StrafeRight),
+    (InputFlags::STRAFELEFT,     ActionBinding::StrafeLeft),
+    (InputFlags::STRAFERIGHT,    ActionBinding::StrafeRight),
     (InputFlags::SHOOT,    ActionBinding::Shoot),
     (InputFlags::USE,      ActionBinding::Use),
     (InputFlags::RUN,      ActionBinding::Run),
@@ -24,7 +24,10 @@ const INPUT_FLAG_MAPPING : [(InputFlags, ActionBinding); 13] = [
     (InputFlags::SELECT2,  ActionBinding::Select2),
     (InputFlags::SELECT3,  ActionBinding::Select3),
     (InputFlags::SELECT4,  ActionBinding::Select4),
-    (InputFlags::SELECT5,  ActionBinding::Select5),
+    (InputFlags::UP,  ActionBinding::Up),
+    (InputFlags::DOWN,  ActionBinding::Down),
+    (InputFlags::LEFT,  ActionBinding::Left),
+    (InputFlags::RIGHT,  ActionBinding::Right),
 ];
 
 fn update_input_keys(input: &mut Input, handler: &InputHandler<MovementBindingTypes>) {
